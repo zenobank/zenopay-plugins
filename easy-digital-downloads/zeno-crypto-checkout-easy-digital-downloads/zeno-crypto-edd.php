@@ -8,7 +8,7 @@
  * Requires at least: 6.0
  * Requires PHP: 7.4
  * License: GPLv2 or later
- * Text Domain: zeno-crypto-edd
+ * Text Domain: zeno-crypto-checkout-for-easy-digital-downloads
  * Requires Plugins: easy-digital-downloads
  */
 
