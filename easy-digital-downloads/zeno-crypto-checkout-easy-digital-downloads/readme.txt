@@ -29,7 +29,7 @@ Or reach out through [Telegram](https://t.me/zenobank)
 2. Activate the plugin under **Plugins → Installed Plugins**.  
 3. Go to [dashboard.zenobank.io](https://dashboard.zenobank.io/) and create your account.  
 4. Add a wallet address or connect your **Binance Pay API** (this is where you will receive funds).  
-5. In your dashboard, go to **Integrations → Easy Digital Donwload**, and click **Connect**.  
+5. In your dashboard, go to **Integrations → Easy Digital Download**, and click **Connect**.  
 6. Copy the generated **API key**.  
 7. In your EDD store, open the **Downloads -> Settings -> Payments -> Zeno** settings and paste the API key.  
 8. Save changes, enable the gateway, and start accepting crypto payments.
