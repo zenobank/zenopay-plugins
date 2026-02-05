@@ -9,6 +9,7 @@ class ZCPG_Gateway extends WC_Payment_Gateway
     private $secret_live;
     private $debug;
     private $test_mode;
+    private $success_order_status;
 
     public function __construct()
     {
@@ -17,7 +18,7 @@ class ZCPG_Gateway extends WC_Payment_Gateway
         $this->method_description = esc_html__('Accept Crypto Payments with Ease', 'zeno-crypto-payment-gateway');
         $this->has_fields         = false;
         $this->supports           = array('products');
-        $this->icon               = ZCPG_PLUGIN_URL . 'assets/checkout-logo.png';
+        $this->icon               = $this->get_checkout_icon_url();
         $this->init_form_fields();
         $this->init_settings();
 
@@ -30,8 +31,9 @@ class ZCPG_Gateway extends WC_Payment_Gateway
 
         $this->api_key_live = $this->get_option('api_key_live', '');
         $this->secret_live  = $this->get_option('secret_live', '');
-        $this->test_mode    = false; // Live mode by default
+        $this->test_mode    = ('yes' === $this->get_option('test_mode', 'no')); // Live mode by default
         $this->debug        = false; // Oculto y deshabilitado en la UI
+        $this->success_order_status = $this->get_success_order_status();
 
         add_action('woocommerce_update_options_payment_gateways_' . $this->id, array($this, 'process_admin_options'));
     }
@@ -76,6 +78,39 @@ class ZCPG_Gateway extends WC_Payment_Gateway
                 'type'    => 'textarea',
                 'default' => __('Pay with Crypto', 'zeno-crypto-payment-gateway'),
             ),
+            'success_order_status' => array(
+                'title'       => __('Order status after successful payment', 'zeno-crypto-payment-gateway'),
+                'type'        => 'select',
+                'description' => __('Choose the WooCommerce order status to apply when the payment has been completed successfully. Default is Processing.', 'zeno-crypto-payment-gateway'),
+                'default'     => 'processing',
+                'options'     => $this->get_available_order_statuses(),
+            ),
+            'test_mode'    => array(
+                'title'       => __('Test mode', 'zeno-crypto-payment-gateway'),
+                'type'        => 'checkbox',
+                'label'       => __('Enable test mode', 'zeno-crypto-payment-gateway'),
+                'description' => __('When test mode is enabled, the checkout will only be visible to admins.', 'zeno-crypto-payment-gateway'),
+                'default'     => 'no',
+            ),
+            'logo_mode'    => array(
+                'title'       => __('Checkout logo', 'zeno-crypto-payment-gateway'),
+                'type'        => 'select',
+                'description' => __('Choose which logo to show in the checkout.', 'zeno-crypto-payment-gateway'),
+                'default'     => 'default',
+                'options'     => array(
+                    'default'  => __('Default logo', 'zeno-crypto-payment-gateway'),
+                    'default2' => __('Alternative logo 2', 'zeno-crypto-payment-gateway'),
+                    'default3' => __('Alternative logo 3', 'zeno-crypto-payment-gateway'),
+                    'none'     => __('No logo', 'zeno-crypto-payment-gateway'),
+                    'custom'   => __('Custom logo (URL or upload)', 'zeno-crypto-payment-gateway'),
+                ),
+            ),
+            'custom_logo_url' => array(
+                'title'       => __('Custom logo URL', 'zeno-crypto-payment-gateway'),
+                'type'        => 'text',
+                'description' => __('Enter the URL of the image to use as the checkout logo, or upload an image in the Media Library and paste its URL here.', 'zeno-crypto-payment-gateway'),
+                'default'     => '',
+            ),
         );
     }
 
@@ -89,6 +124,11 @@ class ZCPG_Gateway extends WC_Payment_Gateway
         if (! empty($this->method_description)) {
             echo '<p>' . esc_html($this->method_description) . '</p>';
         }
+
+        // Support link in settings.
+        echo '<p><a href="' . esc_url('https://zenobank.io/support') . '" target="_blank" rel="noopener noreferrer">'
+            . esc_html__('Support', 'zeno-crypto-payment-gateway')
+            . '</a></p>';
 
         echo '<table class="form-table">';
         $this->generate_settings_html();
@@ -154,6 +194,90 @@ class ZCPG_Gateway extends WC_Payment_Gateway
     private function current_secret(): string
     {
         return (string) $this->secret_live;
+    }
+
+    /**
+     * Get the configured order status to apply after successful payment.
+     *
+     * @return string e.g. 'processing', 'completed'.
+     */
+    public function get_success_order_status(): string
+    {
+        $status = (string) $this->get_option('success_order_status', 'processing');
+
+        // Sanitize: allow only known statuses, fallback to 'processing'.
+        $available = $this->get_available_order_statuses();
+        if (! isset($available[$status])) {
+            $status = 'processing';
+        }
+
+        // Remove potential "wc-" prefix to match wc_update_order_status expectations.
+        if (0 === strpos($status, 'wc-')) {
+            $status = substr($status, 3);
+        }
+
+        return $status;
+    }
+
+    /**
+     * Available order statuses for settings dropdown.
+     *
+     * @return array
+     */
+    private function get_available_order_statuses(): array
+    {
+        if (function_exists('wc_get_order_statuses')) {
+            $statuses = wc_get_order_statuses();
+            $result   = array();
+            foreach ($statuses as $key => $label) {
+                // Normalize keys to strip "wc-" prefix.
+                if (0 === strpos($key, 'wc-')) {
+                    $normalized = substr($key, 3);
+                } else {
+                    $normalized = $key;
+                }
+
+                $result[$normalized] = $label;
+            }
+
+            return $result;
+        }
+
+        // Fallback to common core statuses.
+        return array(
+            'processing' => _x('Processing', 'Order status', 'zeno-crypto-payment-gateway'),
+            'completed'  => _x('Completed', 'Order status', 'zeno-crypto-payment-gateway'),
+            'on-hold'    => _x('On hold', 'Order status', 'zeno-crypto-payment-gateway'),
+        );
+    }
+
+    /**
+     * Resolve checkout icon URL based on settings.
+     *
+     * @return string
+     */
+    private function get_checkout_icon_url(): string
+    {
+        $logo_mode      = $this->get_option('logo_mode', 'default');
+        $custom_logo    = $this->get_option('custom_logo_url', '');
+        $default_logo   = ZCPG_PLUGIN_URL . 'assets/checkout-logo.png';
+        $alternative_2  = ZCPG_PLUGIN_URL . 'assets/checkout-logo-2.png';
+        $alternative_3  = ZCPG_PLUGIN_URL . 'assets/checkout-logo-3.png';
+
+        switch ($logo_mode) {
+            case 'none':
+                return '';
+            case 'custom':
+                $url = esc_url_raw((string) $custom_logo);
+                return $url ?: $default_logo;
+            case 'default2':
+                return $alternative_2;
+            case 'default3':
+                return $alternative_3;
+            case 'default':
+            default:
+                return $default_logo;
+        }
     }
 
     private function has_valid_api_key(): bool
@@ -260,8 +384,23 @@ class ZCPG_Gateway extends WC_Payment_Gateway
             exit;
         }
 
-        $order->payment_complete();
+        $success_status = $gw->get_success_order_status();
+
+        if ('completed' === $success_status) {
+            // Let WooCommerce run its internal payment complete logic first.
+            $order->payment_complete();
+            // Then explicitly set status to completed as requested in settings.
+            $order->set_status('completed');
+            $order->save();
+        } else {
+            $order->update_status(
+                $success_status,
+                esc_html__('Payment confirmed in return URL.', 'zeno-crypto-payment-gateway')
+            );
+        }
+
         $order->add_order_note(esc_html__('Payment confirmed in return URL.', 'zeno-crypto-payment-gateway'));
+
         wp_safe_redirect($gw->get_return_url($order));
         exit;
     }

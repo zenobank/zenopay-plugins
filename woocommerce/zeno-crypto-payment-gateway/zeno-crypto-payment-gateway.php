@@ -54,6 +54,21 @@ add_filter('woocommerce_payment_gateways', function ($gateways) {
 
 // Show the gateway only to administrators when the mode is "test".
 add_filter('woocommerce_available_payment_gateways', function ($gateways) {
+    if (is_admin()) {
+        return $gateways;
+    }
+
+    if (empty($gateways['zcpg_gateway'])) {
+        return $gateways;
+    }
+
+    $settings  = get_option('woocommerce_zcpg_gateway_settings', []);
+    $test_mode = isset($settings['test_mode']) && 'yes' === $settings['test_mode'];
+
+    if ($test_mode && ! current_user_can('manage_woocommerce') && ! current_user_can('manage_options')) {
+        unset($gateways['zcpg_gateway']);
+    }
+
     return $gateways;
 }, 20);
 

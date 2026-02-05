@@ -43,7 +43,19 @@ class ZCPG_Webhook
         // Token is valid: process the order status update
         if ($order_id && ($order = wc_get_order($order_id))) {
             if ($status === 'COMPLETED') {
-                $order->payment_complete($order_id);
+                $success_status = $gw->get_success_order_status();
+
+                if ('completed' === $success_status) {
+                    $order->payment_complete($order_id);
+                    $order->set_status('completed');
+                    $order->save();
+                } else {
+                    $order->update_status(
+                        $success_status,
+                        __('Payment confirmed via webhook.', 'zeno-crypto-payment-gateway')
+                    );
+                }
+
                 $order->add_order_note(__('Payment confirmed via webhook.', 'zeno-crypto-payment-gateway'));
             } else {
                 $order->update_status('failed', __('Payment failed via webhook.', 'zeno-crypto-payment-gateway'));
