@@ -78,12 +78,10 @@ class ZCPG_Gateway extends WC_Payment_Gateway
                 'type'    => 'textarea',
                 'default' => __('Pay with Crypto', 'zeno-crypto-payment-gateway'),
             ),
-            'success_order_status' => array(
-                'title'       => __('Order status after successful payment', 'zeno-crypto-payment-gateway'),
-                'type'        => 'select',
-                'description' => __('Choose the WooCommerce order status to apply when the payment has been completed successfully. Default is Processing.', 'zeno-crypto-payment-gateway'),
-                'default'     => 'processing',
-                'options'     => $this->get_available_order_statuses(),
+            'advanced_title' => array(
+                'title'       => __('Advanced', 'zeno-crypto-payment-gateway'),
+                'type'        => 'title',
+                'description' => __('Advanced status and logo settings.', 'zeno-crypto-payment-gateway'),
             ),
             'test_mode'    => array(
                 'title'       => __('Test mode', 'zeno-crypto-payment-gateway'),
@@ -92,15 +90,47 @@ class ZCPG_Gateway extends WC_Payment_Gateway
                 'description' => __('When test mode is enabled, the checkout will only be visible to admins.', 'zeno-crypto-payment-gateway'),
                 'default'     => 'no',
             ),
+            'success_order_status' => array(
+                'title'       => __('Order status after successful payment', 'zeno-crypto-payment-gateway'),
+                'type'        => 'select',
+                'description' => __('Choose the WooCommerce order status to apply when the payment has been completed successfully. Default is Processing.', 'zeno-crypto-payment-gateway'),
+                'default'     => 'processing',
+                'options'     => $this->get_available_order_statuses(),
+            ),
+            'expired_order_status' => array(
+                'title'       => __('Order status when checkout expires', 'zeno-crypto-payment-gateway'),
+                'type'        => 'select',
+                'description' => __('Choose the order status to apply when the checkout expires. If not configured, WooCommerce default order status will be used (no change).', 'zeno-crypto-payment-gateway'),
+                'default'     => '',
+                'options'     => array_merge(
+                    array(
+                        '' => __('Use WooCommerce default (no change)', 'zeno-crypto-payment-gateway'),
+                    ),
+                    $this->get_available_order_statuses()
+                ),
+            ),
+            'initiated_order_status' => array(
+                'title'       => __('Order status when payment is initiated', 'zeno-crypto-payment-gateway'),
+                'type'        => 'select',
+                'description' => __('Choose the order status to apply when the customer initiates the payment (clicks Pay with Zeno). If not configured, Pending will be used.', 'zeno-crypto-payment-gateway'),
+                'default'     => 'default',
+                'options'     => array_merge(
+                    array(
+                        'default' => __('Use plugin default (Pending)', 'zeno-crypto-payment-gateway'),
+                    ),
+                    $this->get_available_order_statuses()
+                ),
+            ),
             'logo_mode'    => array(
                 'title'       => __('Checkout logo', 'zeno-crypto-payment-gateway'),
                 'type'        => 'select',
                 'description' => __('Choose which logo to show in the checkout.', 'zeno-crypto-payment-gateway'),
                 'default'     => 'default',
                 'options'     => array(
-                    'default'  => __('Default logo', 'zeno-crypto-payment-gateway'),
-                    'default2' => __('Alternative logo 2', 'zeno-crypto-payment-gateway'),
-                    'default3' => __('Alternative logo 3', 'zeno-crypto-payment-gateway'),
+                    'default'  => __('Default', 'zeno-crypto-payment-gateway'),
+                    'default2' => __('Crypto', 'zeno-crypto-payment-gateway'),
+                    'default3' => __('Stablecoins', 'zeno-crypto-payment-gateway'),
+                    'default4' => __('Binance Pay', 'zeno-crypto-payment-gateway'),
                     'none'     => __('No logo', 'zeno-crypto-payment-gateway'),
                     'custom'   => __('Custom logo (URL or upload)', 'zeno-crypto-payment-gateway'),
                 ),
@@ -117,8 +147,6 @@ class ZCPG_Gateway extends WC_Payment_Gateway
 
     public function admin_options()
     {
-
-
         echo '<h2>' . esc_html($this->method_title) . '</h2>';
 
         if (! empty($this->method_description)) {
@@ -132,7 +160,172 @@ class ZCPG_Gateway extends WC_Payment_Gateway
 
         echo '<table class="form-table">';
         $this->generate_settings_html();
-        echo '</table>';
+        echo '</table>'; // Closes the last table opened by generate_settings_html.
+
+        // Logo visual picker data.
+        $logo_options = array(
+            'default'  => array(
+                'label' => __('Default', 'zeno-crypto-payment-gateway'),
+                'url'   => ZCPG_PLUGIN_URL . 'assets/checkout-logo.png',
+            ),
+            'default2' => array(
+                'label' => __('Crypto', 'zeno-crypto-payment-gateway'),
+                'url'   => ZCPG_PLUGIN_URL . 'assets/checkout-logo-2.png',
+            ),
+            'default3' => array(
+                'label' => __('Stablecoins', 'zeno-crypto-payment-gateway'),
+                'url'   => ZCPG_PLUGIN_URL . 'assets/checkout-logo-3.png',
+            ),
+            'default4' => array(
+                'label' => __('Binance Pay', 'zeno-crypto-payment-gateway'),
+                'url'   => ZCPG_PLUGIN_URL . 'assets/checkout-logo-4.png',
+            ),
+            'none'     => array(
+                'label' => __('No logo', 'zeno-crypto-payment-gateway'),
+                'url'   => '',
+            ),
+            'custom'   => array(
+                'label' => __('Custom', 'zeno-crypto-payment-gateway'),
+                'url'   => '',
+            ),
+        );
+        ?>
+        <style>
+            /* Logo picker */
+            .zcpg-logo-picker { display:flex; flex-wrap:wrap; gap:12px; margin-top:4px; }
+            .zcpg-logo-card {
+                border:2px solid #ddd; border-radius:8px; padding:10px; cursor:pointer;
+                text-align:center; min-width:100px; max-width:160px; background:#fff;
+                transition: border-color .2s, box-shadow .2s;
+            }
+            .zcpg-logo-card:hover { border-color:#999; }
+            .zcpg-logo-card.selected { border-color:#2271b1; box-shadow:0 0 0 1px #2271b1; }
+            .zcpg-logo-card img { max-height:40px; max-width:130px; display:block; margin:0 auto 6px; }
+            .zcpg-logo-card .zcpg-card-label { font-size:12px; color:#333; }
+            .zcpg-logo-card .zcpg-no-logo-icon { font-size:22px; color:#999; margin-bottom:6px; display:block; }
+            .zcpg-logo-card .zcpg-custom-icon { font-size:22px; color:#2271b1; margin-bottom:6px; display:block; }
+            #zcpg-custom-preview { margin-top:8px; }
+            #zcpg-custom-preview img { max-height:40px; }
+            /* Advanced collapsible */
+            .zcpg-advanced-toggle {
+                display:inline-flex; align-items:center; gap:6px; cursor:pointer;
+                margin:20px 0 0; padding:10px 0; font-size:14px; font-weight:600;
+                color:#2271b1; user-select:none; border:none; background:none;
+            }
+            .zcpg-advanced-toggle:hover { color:#135e96; }
+            .zcpg-advanced-toggle .dashicons {
+                font-size:16px; width:16px; height:16px;
+                transition: transform .2s;
+            }
+            .zcpg-advanced-toggle.open .dashicons { transform:rotate(90deg); }
+            .zcpg-advanced-content { display:none; }
+            .zcpg-advanced-content.open { display:block; }
+        </style>
+        <script type="text/javascript">
+        (function($) {
+            /* ── Advanced section: collapsible ── */
+            // WooCommerce type=title generates: <h3 id="...">Title</h3><p>desc</p><table>...rows...</table>
+            var $advH3 = $('#woocommerce_zcpg_gateway_advanced_title');
+            if ($advH3.length) {
+                // Collect only the <p> and <table> that follow the <h3>, stop before <style>/<script>.
+                var $advContent = $advH3.nextUntil('style, script');
+
+                // Hide original heading.
+                $advH3.hide();
+
+                // Build toggle button and wrapper.
+                var $toggle = $(
+                    '<button type="button" class="zcpg-advanced-toggle">' +
+                        '<span class="dashicons dashicons-arrow-right-alt2"></span>' +
+                        '<?php echo esc_js(__('Advanced settings', 'zeno-crypto-payment-gateway')); ?>' +
+                    '</button>'
+                );
+                var $wrapper = $('<div class="zcpg-advanced-content"></div>');
+
+                // Insert toggle + wrapper right after the hidden <h3>.
+                $advH3.after($toggle);
+                $toggle.after($wrapper);
+
+                // Move all advanced content into the wrapper.
+                $advContent.appendTo($wrapper);
+
+                $toggle.on('click', function() {
+                    $(this).toggleClass('open');
+                    $wrapper.toggleClass('open');
+                });
+            }
+
+            /* ── Logo visual picker ── */
+            var $select    = $('#woocommerce_zcpg_gateway_logo_mode');
+            var $selectRow = $select.closest('tr');
+            var $customRow = $('#woocommerce_zcpg_gateway_custom_logo_url').closest('tr');
+            var $customInput = $('#woocommerce_zcpg_gateway_custom_logo_url');
+
+            $select.hide();
+
+            var options = <?php echo wp_json_encode($logo_options); ?>;
+            var pickerHtml = '<div class="zcpg-logo-picker">';
+            $.each(options, function(key, opt) {
+                var inner = '';
+                if (key === 'none') {
+                    inner = '<span class="zcpg-no-logo-icon">&#8709;</span>';
+                } else if (key === 'custom') {
+                    inner = '<span class="zcpg-custom-icon">&#9998;</span>';
+                } else {
+                    inner = '<img src="' + opt.url + '" alt="' + opt.label + '" />';
+                }
+                pickerHtml += '<div class="zcpg-logo-card" data-value="' + key + '">'
+                    + inner
+                    + '<span class="zcpg-card-label">' + opt.label + '</span>'
+                    + '</div>';
+            });
+            pickerHtml += '</div>';
+
+            pickerHtml += '<div id="zcpg-custom-preview" style="display:none;margin-top:8px;">'
+                + '<img src="" alt="<?php echo esc_attr(__('Custom logo preview', 'zeno-crypto-payment-gateway')); ?>" style="max-height:40px;display:none;" />'
+                + '<span style="color:#999;display:none;"><?php echo esc_js(__('Enter a URL to see the preview', 'zeno-crypto-payment-gateway')); ?></span>'
+                + '</div>';
+
+            $select.after(pickerHtml);
+
+            var $cards = $selectRow.find('.zcpg-logo-card');
+            var $previewWrap = $('#zcpg-custom-preview');
+            var $previewImg  = $previewWrap.find('img');
+            var $previewHint = $previewWrap.find('span');
+
+            function syncUI() {
+                var val = $select.val();
+                $cards.removeClass('selected');
+                $cards.filter('[data-value="' + val + '"]').addClass('selected');
+
+                if (val === 'custom') {
+                    $customRow.show();
+                    $previewWrap.show();
+                    var url = $.trim($customInput.val());
+                    if (url) {
+                        $previewImg.attr('src', url).show();
+                        $previewHint.hide();
+                    } else {
+                        $previewImg.hide();
+                        $previewHint.show();
+                    }
+                } else {
+                    $customRow.hide();
+                    $previewWrap.hide();
+                }
+            }
+
+            $cards.on('click', function() {
+                $select.val($(this).data('value')).trigger('change');
+            });
+
+            $select.on('change', syncUI);
+            $customInput.on('input change', syncUI);
+
+            syncUI();
+        })(jQuery);
+        </script>
+        <?php
     }
 
     public function process_admin_options()
@@ -220,6 +413,34 @@ class ZCPG_Gateway extends WC_Payment_Gateway
     }
 
     /**
+     * Get the configured order status to apply when checkout expires.
+     *
+     * Returns empty string when no change should be applied.
+     *
+     * @return string
+     */
+    public function get_expired_order_status(): string
+    {
+        $status = (string) $this->get_option('expired_order_status', '');
+
+        if ('' === $status) {
+            // Use WooCommerce default behaviour (no explicit status change).
+            return '';
+        }
+
+        $available = $this->get_available_order_statuses();
+        if (! isset($available[$status])) {
+            return '';
+        }
+
+        if (0 === strpos($status, 'wc-')) {
+            $status = substr($status, 3);
+        }
+
+        return $status;
+    }
+
+    /**
      * Available order statuses for settings dropdown.
      *
      * @return array
@@ -263,6 +484,7 @@ class ZCPG_Gateway extends WC_Payment_Gateway
         $default_logo   = ZCPG_PLUGIN_URL . 'assets/checkout-logo.png';
         $alternative_2  = ZCPG_PLUGIN_URL . 'assets/checkout-logo-2.png';
         $alternative_3  = ZCPG_PLUGIN_URL . 'assets/checkout-logo-3.png';
+        $alternative_4  = ZCPG_PLUGIN_URL . 'assets/checkout-logo-4.png';
 
         switch ($logo_mode) {
             case 'none':
@@ -274,10 +496,40 @@ class ZCPG_Gateway extends WC_Payment_Gateway
                 return $alternative_2;
             case 'default3':
                 return $alternative_3;
+            case 'default4':
+                return $alternative_4;
             case 'default':
             default:
                 return $default_logo;
         }
+    }
+
+    /**
+     * Get the configured status to use when payment is initiated.
+     *
+     * If set to "default" or invalid, falls back to "pending" to preserve
+     * previous behaviour.
+     *
+     * @return string
+     */
+    public function get_initiated_order_status(): string
+    {
+        $setting = (string) $this->get_option('initiated_order_status', 'default');
+
+        if ('default' === $setting || '' === $setting) {
+            return 'pending';
+        }
+
+        $available = $this->get_available_order_statuses();
+        if (! isset($available[$setting])) {
+            return 'pending';
+        }
+
+        if (0 === strpos($setting, 'wc-')) {
+            $setting = substr($setting, 3);
+        }
+
+        return $setting;
     }
 
     private function has_valid_api_key(): bool
@@ -344,7 +596,12 @@ class ZCPG_Gateway extends WC_Payment_Gateway
             return array('result' => 'failure');
         }
 
-        $order->update_status('pending', esc_html__('Waiting for payment in Crypto Gateway', 'zeno-crypto-payment-gateway'));
+        $initiated_status = $this->get_initiated_order_status();
+
+        $order->update_status(
+            $initiated_status,
+            esc_html__('Waiting for payment in Crypto Gateway', 'zeno-crypto-payment-gateway')
+        );
 
         update_post_meta($order_id, '_zcpg_payment_url', esc_url_raw($payment_url));
 

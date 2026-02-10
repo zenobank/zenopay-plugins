@@ -42,8 +42,19 @@ class ZCPG_Webhook
 
         // Token is valid: process the order status update
         if ($order_id && ($order = wc_get_order($order_id))) {
+            $current_status  = $order->get_status(); // already without "wc-" prefix.
+            $success_status  = $gw->get_success_order_status();
+            $expired_status  = $gw->get_expired_order_status();
+
             if ($status === 'COMPLETED') {
-                $success_status = $gw->get_success_order_status();
+                // Idempotency: if already in the configured success status, do nothing.
+                if ($current_status === $success_status) {
+                    return [
+                        'ok'       => true,
+                        'order_id' => $order_id,
+                        'status'   => $status,
+                    ];
+                }
 
                 if ('completed' === $success_status) {
                     $order->payment_complete($order_id);
@@ -57,8 +68,36 @@ class ZCPG_Webhook
                 }
 
                 $order->add_order_note(__('Payment confirmed via webhook.', 'zeno-crypto-payment-gateway'));
+            } elseif ($status === 'EXPIRED') {
+                // If no explicit status is configured for expired, keep Woo default behaviour.
+                if ('' === $expired_status) {
+                    return [
+                        'ok'       => true,
+                        'order_id' => $order_id,
+                        'status'   => $status,
+                    ];
+                }
+
+                // Do not downgrade already completed / successful orders.
+                if ($current_status === $success_status || $current_status === $expired_status) {
+                    return [
+                        'ok'       => true,
+                        'order_id' => $order_id,
+                        'status'   => $status,
+                    ];
+                }
+
+                $order->update_status(
+                    $expired_status,
+                    __('Payment expired via webhook.', 'zeno-crypto-payment-gateway')
+                );
             } else {
-                $order->update_status('failed', __('Payment failed via webhook.', 'zeno-crypto-payment-gateway'));
+                // Any other intermediate / non-final status is ignored to keep webhooks idempotent.
+                return [
+                    'ok'       => true,
+                    'order_id' => $order_id,
+                    'status'   => $status,
+                ];
             }
         }
 
