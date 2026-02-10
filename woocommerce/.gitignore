@@ -1,0 +1,5 @@
+node_modules/
+.svn/
+*.zip
+.DS_Store
+.svn/*

@@ -1,0 +1,45 @@
+== Changelog ==
+= 1.0.11 =
+
+* Updated plugin checkout logo
+* Updated plugin icon
+
+= 1.0.10 =
+
+* Updated readme.txt to declare ompatibility with WordPress 6.9
+* Minor grammatical corrections
+
+= 1.0.9 =
+* Resolved an issue where the crypto payment gateway was only visible to admin users.
+
+= 1.0.8 =
+* Minor changes
+
+= 1.0.7 =
+*  Simplified payment confirmation note message
+
+= 1.0.6 =
+
+* Modify success URL handling in payment gateway and enhance webhook order note with checkout ID.
+
+= 1.0.5 =
+* Minor fix
+
+= 1.0.4 =
+* Removed test mode visibility restriction 
+
+= 1.0.3 =
+* Updated readme.txt (improved plugin description and formatting).
+
+= 1.0.2 =
+* Updated readme.txt (improved plugin description and formatting).
+* Hid verification token in checkout success and webhook
+
+= 1.0.1 =
+* Added: Admin settings panel  
+* Added: Binance Pay integration  
+* Updated: Documentation links  
+
+= 1.0.0 =
+* Initial release
+

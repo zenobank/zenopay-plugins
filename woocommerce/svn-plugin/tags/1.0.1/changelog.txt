@@ -1,0 +1,10 @@
+== Changelog ==
+
+= 1.0.1 =
+* Added: Admin settings panel  
+* Added: Binance Pay integration  
+* Updated: Documentation links  
+
+= 1.0.0 =
+* Initial release
+
