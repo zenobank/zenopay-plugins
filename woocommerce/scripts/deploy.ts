@@ -35,10 +35,10 @@ const JUNK_PATTERNS = [".DS_Store", "Thumbs.db"];
 // Paths derived from script location (ESM)
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT_DIR = resolve(__dirname, "..");
-const PLUGIN_DIR = resolve(ROOT_DIR, PLUGIN_SLUG);
+const SVN_DIR = resolve(ROOT_DIR, "svn-plugin");
+const PLUGIN_DIR = resolve(SVN_DIR, "trunk");
 const MAIN_PHP = resolve(PLUGIN_DIR, PLUGIN_FILE);
 const README = resolve(PLUGIN_DIR, "readme.txt");
-const DEFAULT_SVN_PATH = resolve(ROOT_DIR, "svn-plugin");
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -108,7 +108,6 @@ interface Options {
   force: boolean;
   noClean: boolean;
   endpoint: string;
-  svnPath: string;
 }
 
 function parseArgs(): Options {
@@ -120,21 +119,18 @@ function parseArgs(): Options {
     .option("-y, --force", "Skip interactive confirmations", false)
     .option("--no-clean", "Skip cleaning .DS_Store / Thumbs.db files")
     .option("--endpoint <url>", "Expected API endpoint", DEFAULT_ENDPOINT)
-    .option("--svn-path <path>", "Path to WordPress.org SVN checkout", DEFAULT_SVN_PATH)
     .parse();
 
   const opts = program.opts<{
     force: boolean;
     clean: boolean;
     endpoint: string;
-    svnPath: string;
   }>();
 
   return {
     force: opts.force,
     noClean: !opts.clean,
     endpoint: opts.endpoint,
-    svnPath: opts.svnPath,
   };
 }
 
@@ -293,35 +289,24 @@ function step6_versionConsistency(): string {
   return stableTag;
 }
 
-/** Step 7: Sync plugin to SVN trunk via rsync, then stage additions/removals. */
-async function step8_syncToSvn(svnPath: string, force: boolean) {
-  if (!svnPath) {
-    warn("No --svn-path provided. Skipping SVN sync.");
+/** Step 7: Stage changes, commit trunk, and create a version tag in SVN. */
+async function step7_svnPublish(version: string, force: boolean) {
+  if (!existsSync(PLUGIN_DIR)) {
+    warn(`SVN trunk not found: ${PLUGIN_DIR}`);
+    warn("Run 'svn checkout' first. Skipping SVN publish.");
     return;
   }
-
-  const svnTrunk = join(svnPath, "trunk");
-
-  if (!existsSync(svnTrunk)) {
-    warn(`SVN trunk not found: ${svnTrunk}`);
-    warn("Run 'svn checkout' first. Skipping SVN sync.");
-    return;
-  }
-
-  info(`Syncing plugin to SVN trunk: ${svnTrunk}`);
-
-  if (!force) {
-    await confirmOrExit("Sync plugin files to SVN trunk?");
-  }
-
-  run(`rsync -avz --delete --exclude=".svn" "${PLUGIN_DIR}/" "${svnTrunk}/"`);
 
   // Stage new/changed files
-  run("svn add --force .", svnTrunk);
+  info("Staging SVN changes...");
+  run("svn add --force .", PLUGIN_DIR);
 
-  // Remove files deleted from the plugin
+  // Remove files deleted from trunk
   try {
-    const status = execSync("svn status", { cwd: svnTrunk, encoding: "utf-8" });
+    const status = execSync("svn status", {
+      cwd: PLUGIN_DIR,
+      encoding: "utf-8",
+    });
     const missing = status
       .split("\n")
       .filter((line) => line.startsWith("!"))
@@ -329,25 +314,14 @@ async function step8_syncToSvn(svnPath: string, force: boolean) {
       .filter(Boolean);
 
     for (const file of missing) {
-      run(`svn rm "${file}"`, svnTrunk);
+      run(`svn rm "${file}"`, PLUGIN_DIR);
     }
   } catch {
     // No missing files
   }
 
-  success("SVN trunk synced.");
-}
-
-/** Step 8: Optionally commit trunk and create a version tag in SVN. */
-async function step9_svnPublish(
-  svnPath: string,
-  version: string,
-  force: boolean
-) {
-  if (!svnPath) return;
-
-  const svnTrunk = join(svnPath, "trunk");
-  if (!existsSync(svnTrunk)) return;
+  // Show pending changes
+  run("svn status", SVN_DIR);
 
   if (!force) {
     const shouldPublish = await confirm(
@@ -360,13 +334,13 @@ async function step9_svnPublish(
   }
 
   info("Committing trunk...");
-  run(`svn commit trunk -m "Deploy version ${version}"`, svnPath);
+  run(`svn commit trunk -m "Deploy version ${version}"`, SVN_DIR);
 
   info(`Creating tag ${version}...`);
-  run(`svn cp trunk "tags/${version}"`, svnPath);
+  run(`svn cp trunk "tags/${version}"`, SVN_DIR);
 
   info(`Committing tag ${version}...`);
-  run(`svn commit "tags/${version}" -m "Tag version ${version}"`, svnPath);
+  run(`svn commit "tags/${version}" -m "Tag version ${version}"`, SVN_DIR);
 
   success(`Version ${version} published to WordPress.org SVN.`);
 }
@@ -404,11 +378,8 @@ async function main() {
   // Step 6: Version consistency
   const version = step6_versionConsistency();
 
-  // Step 7: Sync to SVN trunk
-  await step8_syncToSvn(opts.svnPath, opts.force);
-
-  // Step 8: Optionally publish
-  await step9_svnPublish(opts.svnPath, version, opts.force);
+  // Step 7: SVN publish
+  await step7_svnPublish(version, opts.force);
 
   closeRL();
   console.log(colors.bold(colors.green("\nDeploy complete.\n")));
