@@ -3,7 +3,12 @@
   "private": true,
   "packageManager": "pnpm@10.4.1",
   "workspaces": [
-    "woocommerce"
+    "prestashop",
+    "prestashop/*",
+    "whm",
+    "whm/*",
+    "wordpress",
+    "wordpress/*"
   ],
   "scripts": {
     "typecheck": "turbo run typecheck",

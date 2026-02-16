@@ -1,2 +1,7 @@
 packages:
-  - "woocommerce"
+  - "prestashop"
+  - "prestashop/*"
+  - "whm"
+  - "whm/*"
+  - "wordpress"
+  - "wordpress/*"
