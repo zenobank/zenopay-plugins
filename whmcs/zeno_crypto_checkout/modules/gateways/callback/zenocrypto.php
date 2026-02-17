@@ -10,6 +10,8 @@ require_once __DIR__ . '/../../../init.php';
 require_once __DIR__ . '/../../../includes/gatewayfunctions.php';
 require_once __DIR__ . '/../../../includes/invoicefunctions.php';
 
+use WHMCS\Database\Capsule;
+
 // Detect module name from filename.
 $gatewayModuleName = basename(__FILE__, '.php');
 
@@ -93,58 +95,23 @@ if (!hash_equals($expectedToken, (string) $hash)) {
     exit('Verification token mismatch');
 }
 
-/**
- * Validate Callback Invoice ID.
- *
- * Checks invoice ID is a valid invoice number. Note it will count an
- * invoice in any status as valid.
- *
- * Performs a die upon encountering an invalid Invoice ID.
- *
- * Returns a normalised invoice ID.
- *
- * @param int $invoiceId Invoice ID
- * @param string $gatewayName Gateway Name
- */
+// Validate invoice ID
 $invoiceId = checkCbInvoiceID($invoiceId, $gatewayParams['name']);
 
-/**
- * Check Callback Transaction ID.
- *
- * Performs a check for any existing transactions with the same given
- * transaction number.
- *
- * Performs a die upon encountering a duplicate.
- *
- * @param string $transactionId Unique Transaction ID
- */
-checkCbTransID($transactionId);
+// Idempotency: if this transaction was already recorded, return 200 OK
+$existing = Capsule::table('tblaccounts')
+    ->where('transid', $transactionId)
+    ->where('gateway', $gatewayModuleName)
+    ->first();
 
-/**
- * Log Transaction.
- *
- * Add an entry to the Gateway Log for debugging purposes.
- *
- * The debug data can be a string or an array. In the case of an
- * array it will be
- *
- * @param string $gatewayName        Display label
- * @param string|array $debugData    Data to log
- * @param string $transactionStatus  Status
- */
+if ($existing) {
+    logTransaction($gatewayParams['name'], $rawBody, 'Duplicate webhook (already processed)');
+    http_response_code(200);
+    exit('OK');
+}
+
 logTransaction($gatewayParams['name'], $rawBody, 'Success');
 
-/**
- * Add Invoice Payment.
- *
- * Applies a payment transaction entry to the given invoice ID.
- *
- * @param int $invoiceId         Invoice ID
- * @param string $transactionId  Transaction ID
- * @param float $paymentAmount   Amount paid (defaults to full balance)
- * @param float $paymentFee      Payment fee (optional)
- * @param string $gatewayModule  Gateway module name
- */
 addInvoicePayment(
     $invoiceId,
     $transactionId,
@@ -152,5 +119,15 @@ addInvoicePayment(
     $paymentFee,
     $gatewayModuleName
 );
+
+// Clean up cached checkout for this invoice
+try {
+    Capsule::table('mod_zenocrypto_checkouts')
+        ->where('invoice_id', $invoiceId)
+        ->delete();
+} catch (\Exception $e) {
+    // Non-fatal
+}
+
 http_response_code(200);
 exit('OK');

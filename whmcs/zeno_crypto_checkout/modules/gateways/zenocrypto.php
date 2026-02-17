@@ -75,6 +75,22 @@ function zenocrypto_config()
 }
 
 /**
+ * Ensure the checkouts cache table exists.
+ */
+function zenocrypto_ensureCheckoutsTable()
+{
+    if (!Capsule::schema()->hasTable('mod_zenocrypto_checkouts')) {
+        Capsule::schema()->create('mod_zenocrypto_checkouts', function ($table) {
+            $table->unsignedInteger('invoice_id')->primary();
+            $table->string('checkout_url', 512);
+            $table->decimal('amount', 16, 8);
+            $table->string('currency', 10);
+            $table->timestamp('created_at')->useCurrent();
+        });
+    }
+}
+
+/**
  * Payment link.
  */
 function zenocrypto_link($params)
@@ -110,6 +126,28 @@ function zenocrypto_link($params)
     $moduleName = $params['paymentmethod'];
     $whmcsVersion = $params['whmcsVersion'];
 
+    // Check for a cached checkout URL for this invoice
+    try {
+        zenocrypto_ensureCheckoutsTable();
+        $cached = Capsule::table('mod_zenocrypto_checkouts')
+            ->where('invoice_id', $invoiceId)
+            ->first();
+
+        // Reuse cached checkout if amount and currency haven't changed
+        if ($cached
+            && bccomp((string) $cached->amount, (string) $amount, 8) === 0
+            && $cached->currency === $currencyCode
+        ) {
+            $url = htmlspecialchars($cached->checkout_url, ENT_QUOTES, 'UTF-8');
+            $htmlOutput = '<form method="get" action="' . $url . '">';
+            $htmlOutput .= '<input type="submit" value="' . htmlspecialchars($langPayNow, ENT_QUOTES, 'UTF-8') . '" />';
+            $htmlOutput .= '</form>';
+            return $htmlOutput;
+        }
+    } catch (\Exception $e) {
+        // If cache lookup fails, continue to create a new checkout
+    }
+
     $token = hash_hmac(
         'sha256',
         $invoiceId,
@@ -131,7 +169,7 @@ function zenocrypto_link($params)
             'orderId' => $invoiceId,
             'priceAmount' => $amount,
             'priceCurrency' => $currencyCode,
-            'webhookUrl' => $systemUrl . '/modules/gateways/callback/' . $moduleName . '.php',
+            'webhookUrl' => rtrim($systemUrl, '/') . '/modules/gateways/callback/' . $moduleName . '.php',
             'verificationToken' => $token,
             'successRedirectUrl' => $returnUrl
         ]),
@@ -165,6 +203,21 @@ function zenocrypto_link($params)
     $result = json_decode($response);
     if (!is_object($result) || empty($result->checkoutUrl)) {
         return '<div class="alert alert-danger">Could not create checkout. Please try again.</div>';
+    }
+
+    // Cache the checkout URL for this invoice
+    try {
+        Capsule::table('mod_zenocrypto_checkouts')->updateOrInsert(
+            ['invoice_id' => $invoiceId],
+            [
+                'checkout_url' => $result->checkoutUrl,
+                'amount' => $amount,
+                'currency' => $currencyCode,
+                'created_at' => date('Y-m-d H:i:s'),
+            ]
+        );
+    } catch (\Exception $e) {
+        // Cache write failure is non-fatal
     }
 
     $url = htmlspecialchars($result->checkoutUrl, ENT_QUOTES, 'UTF-8');
