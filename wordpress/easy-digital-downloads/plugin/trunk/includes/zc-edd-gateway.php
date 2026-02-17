@@ -23,7 +23,6 @@ add_filter(
 add_filter(
 	'edd_accepted_payment_icons',
 	function ($icons) {
-		$api_key = znccedd_api_key();
 		$icons['znccedd'] = __('Zeno', 'zeno-crypto-checkout-for-easy-digital-downloads');
 		return $icons;
 	}
