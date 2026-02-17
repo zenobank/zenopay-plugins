@@ -13,7 +13,7 @@ services:
       - db_data:/var/lib/mysql
 
   wordpress:
-    image: wordpress:6.6-php8.3-apache
+    image: wordpress:6.9.1-php8.3-apache
     restart: always
     depends_on:
       - db
@@ -26,8 +26,8 @@ services:
       WORDPRESS_DB_NAME: "wordpress"
     volumes:
       - ./wp_data:/var/www/html
-      - ${PWD}/../woocommerce/plugin/trunk:/var/www/html/wp-content/plugins/zeno-crypto-payment-gateway
-      - ${PWD}/../easy-digital-downloads/plugin/trunk:/var/www/html/wp-content/plugins/zeno-crypto-checkout-for-easy-digital-downloads
+      - ./woocommerce/plugin/trunk:/var/www/html/wp-content/plugins/zeno-crypto-payment-gateway
+      - ./easy-digital-downloads/plugin/trunk:/var/www/html/wp-content/plugins/zeno-crypto-checkout-for-easy-digital-downloads
 
   phpmyadmin:
     image: phpmyadmin:5.2.1
