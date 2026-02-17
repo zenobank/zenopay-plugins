@@ -30,7 +30,7 @@ if (!defined('_PS_VERSION_')) {
 }
 
 define('ZCPG_API_ENDPOINT', 'https://api.zenobank.io');
-define('_WEBHOOK_ROUTE_', 'zcpg/webhook/checkout');
+define('_WEBHOOK_ROUTE_', 'zcpg/prestashop/webhook');
 define('_ZENO_DB_TABLE_', 'zenocpg');
 
 class Zenocpg extends PaymentModule
@@ -144,7 +144,7 @@ class Zenocpg extends PaymentModule
             $apiKeyValue = Tools::getValue('ZENO_CPG_API_KEY');
             if (!$apiKeyValue && !Configuration::get('ZENO_CPG_API_KEY')) {
                 $this->_postErrors[] = $this->trans(
-                    'API Key are required.',
+                    'API Key is required.',
                     [],
                     'Modules.Zenocpg.Admin'
                 );
