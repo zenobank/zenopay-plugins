@@ -54,42 +54,6 @@ class ZenocpgConfirmationModuleFrontController extends ModuleFrontController
             return;
         }
 
-        $query_find = 'SELECT id_zeno_payment FROM `' . _DB_PREFIX_ . _ZENO_DB_TABLE_ . '` WHERE id_cart = ' . $id_cart;
-        $id_zeno_payment = Db::getInstance()->getValue($query_find);
-
-        if ($id_zeno_payment) {
-            $headers = [
-                'Content-Type: application/json',
-                'Accept: application/json',
-            ];
-
-            $zeno_api_url = ZCPG_API_ENDPOINT . '/api/v1/checkouts/' . $id_zeno_payment;
-
-            $ch = curl_init();
-            curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-            curl_setopt($ch, CURLOPT_URL, $zeno_api_url);
-            curl_setopt($ch, CURLOPT_POST, false);
-            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-            curl_setopt($ch, CURLOPT_FAILONERROR, true);
-            curl_setopt($ch, CURLINFO_HEADER_OUT, true);
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            $response = curl_exec($ch);
-            curl_close($ch);
-
-            if ($response) {
-                $body = json_decode($response, true);
-                $order_status_back = isset($body['status']) ? (string) $body['status'] : '';
-
-                if ($order_status_back == 'COMPLETED') {
-                    $pr_order_status_complete = (int) Configuration::get('ZENO_PAYMENT_ACCEPTED');
-                    if (!$pr_order_status_complete) {
-                        $pr_order_status_complete = (int) Configuration::get('PS_OS_PAYMENT');
-                    }
-                    $this->order_complete_status((int) $id_order, $pr_order_status_complete);
-                }
-            }
-        }
-
         Tools::redirect(
             'index.php?controller=order-confirmation&id_cart=' . $id_cart
             . '&id_module=' . $this->module->id
@@ -98,30 +62,4 @@ class ZenocpgConfirmationModuleFrontController extends ModuleFrontController
         );
     }
 
-    public function order_complete_status($id_order, $pr_order_status_complete)
-    {
-        $order = new Order((int) $id_order);
-        if (!Validate::isLoadedObject($order)) {
-            return false;
-        }
-
-        $new_history = new OrderHistory();
-        $new_history->id_order = (int) $id_order;
-        $result = $new_history->changeIdOrderState((int) $pr_order_status_complete, (int) $id_order, true);
-        $new_history->add();
-        if (!$result) {
-            return false;
-        }
-        /*
-        // Synchronize stock if advanced stock management is enabled
-        if (Configuration::get('PS_ADVANCED_STOCK_MANAGEMENT')) {
-            foreach ($order->getProducts() as $product) {
-                if (StockAvailable::dependsOnStock($product['product_id'])) {
-                    StockAvailable::synchronize($product['product_id'], (int)$order->id_shop);
-                }
-            }
-        }*/
-
-        return true;
-    }
 }
