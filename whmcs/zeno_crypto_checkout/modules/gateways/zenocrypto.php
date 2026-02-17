@@ -1,9 +1,5 @@
 <?php
 
-/**
- * WHMCS Zeno Crypto Gateway Module
- * @author     Anurag Rathore <anuragr1983@yahoo.com>
- */
 
 if (!defined("WHMCS")) {
     die("This file cannot be accessed directly");
@@ -23,61 +19,52 @@ function zenocrypto_MetaData()
 }
 
 /**
- * Runs once when the module is activated.
- * Creates the secret key and the checkouts cache table.
- */
-function zenocrypto_activate()
-{
-    // Generate secret key for webhook verification
-    $existing = Capsule::table('tblpaymentgateways')
-        ->where('gateway', 'zenocrypto')
-        ->where('setting', 'secret_key')
-        ->value('value');
-
-    if (!$existing) {
-        $hex = bin2hex(random_bytes(16));
-        $uuid = substr($hex, 0, 8) . '-' .
-            substr($hex, 8, 4) . '-' .
-            substr($hex, 12, 4) . '-' .
-            substr($hex, 16, 4) . '-' .
-            substr($hex, 20);
-
-        Capsule::table('tblpaymentgateways')->insert([
-            'gateway' => 'zenocrypto',
-            'setting' => 'secret_key',
-            'value'   => encrypt($uuid),
-        ]);
-    }
-
-    // Create checkouts cache table
-    if (!Capsule::schema()->hasTable('mod_zenocrypto_checkouts')) {
-        Capsule::schema()->create('mod_zenocrypto_checkouts', function ($table) {
-            $table->unsignedInteger('invoice_id')->primary();
-            $table->string('checkout_url', 512);
-            $table->decimal('amount', 16, 8);
-            $table->string('currency', 10);
-            $table->timestamp('created_at')->useCurrent();
-        });
-    }
-}
-
-/**
- * Runs once when the module is deactivated.
- */
-function zenocrypto_deactivate()
-{
-    Capsule::schema()->dropIfExists('mod_zenocrypto_checkouts');
-}
-
-/**
  * Define gateway configuration options.
+ * Also handles one-time setup (secret key + cache table) since
+ * payment gateways don't have activate/deactivate hooks.
  */
 function zenocrypto_config()
 {
+    // One-time setup: generate secret key if missing
+    try {
+        $existing = Capsule::table('tblpaymentgateways')
+            ->where('gateway', 'zenocrypto')
+            ->where('setting', 'secret_key')
+            ->value('value');
+
+        if (!$existing) {
+            $hex = bin2hex(random_bytes(16));
+            $uuid = substr($hex, 0, 8) . '-' .
+                substr($hex, 8, 4) . '-' .
+                substr($hex, 12, 4) . '-' .
+                substr($hex, 16, 4) . '-' .
+                substr($hex, 20);
+
+            Capsule::table('tblpaymentgateways')->insert([
+                'gateway' => 'zenocrypto',
+                'setting' => 'secret_key',
+                'value'   => encrypt($uuid),
+            ]);
+        }
+
+        // One-time setup: create checkouts cache table
+        if (!Capsule::schema()->hasTable('mod_zenocrypto_checkouts')) {
+            Capsule::schema()->create('mod_zenocrypto_checkouts', function ($table) {
+                $table->unsignedInteger('invoice_id')->primary();
+                $table->string('checkout_url', 512);
+                $table->decimal('amount', 16, 8);
+                $table->string('currency', 10);
+                $table->timestamp('created_at')->useCurrent();
+            });
+        }
+    } catch (\Exception $e) {
+        // Silently fail during gateway discovery
+    }
+
     return [
         'FriendlyName' => [
             'Type' => 'System',
-            'Value' => 'Zeno Crypto Gateway',
+            'Value' => 'USDT, USDC, Binance Pay',
         ],
         'api_key' => [
             'FriendlyName' => 'API Key',
@@ -97,12 +84,20 @@ function zenocrypto_link($params)
     // Gateway Configuration Parameters
     $apiKey = $params['api_key'];
     if (empty($apiKey)) {
-        return '<div class="alert alert-danger">Gateway misconfigured: missing API key.</div>';
+        return '';
     }
 
     $secretKey = $params['secret_key'];
     if (empty($secretKey)) {
-        return '<div class="alert alert-danger">Gateway misconfigured: missing secret key. Try deactivating and reactivating the module.</div>';
+        // Lazy init: secret key wasn't created yet (admin never opened config)
+        zenocrypto_config();
+        $secretKey = Capsule::table('tblpaymentgateways')
+            ->where('gateway', 'zenocrypto')
+            ->where('setting', 'secret_key')
+            ->value('value');
+        if (empty($secretKey)) {
+            return '';
+        }
     }
     $secretKey = decrypt($secretKey);
 

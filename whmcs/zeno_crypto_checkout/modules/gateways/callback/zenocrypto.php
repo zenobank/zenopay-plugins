@@ -1,10 +1,5 @@
 <?php
 
-/**
- * WHMCS Zeno Crypto Gateway Module
- * @author     Anurag Rathore <anuragr1983@yahoo.com>
- */
-
 // Require libraries needed for gateway module functions.
 require_once __DIR__ . '/../../../init.php';
 require_once __DIR__ . '/../../../includes/gatewayfunctions.php';
