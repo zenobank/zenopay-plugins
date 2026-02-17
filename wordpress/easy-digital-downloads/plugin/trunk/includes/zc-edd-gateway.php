@@ -8,10 +8,10 @@ add_filter(
 	'edd_payment_gateways',
 	function ($gateways) {
 
-		$title = edd_get_option('zenocrch_title', __('USDT, USDC', 'zeno-crypto-checkout-for-easy-digital-downloads'));
+		$title = edd_get_option('znccedd_title', __('USDT, USDC', 'zeno-crypto-checkout-for-easy-digital-downloads'));
 		$title = is_string($title) ? trim($title) : __('USDT, USDC', 'zeno-crypto-checkout-for-easy-digital-downloads');
 
-		$gateways[ZENOCRCH_GATEWAY_ID] = array(
+		$gateways[ZNCCEDD_GATEWAY_ID] = array(
 			'admin_label'    => __('Zeno Crypto Checkout', 'zeno-crypto-checkout-for-easy-digital-downloads'),
 			'checkout_label' => $title,
 		);
@@ -23,24 +23,24 @@ add_filter(
 add_filter(
 	'edd_accepted_payment_icons',
 	function ($icons) {
-		$api_key = zenocrch_api_key();
-		$icons['zenocrch'] = __('Zeno', 'zeno-crypto-checkout-for-easy-digital-downloads');
+		$api_key = znccedd_api_key();
+		$icons['znccedd'] = __('Zeno', 'zeno-crypto-checkout-for-easy-digital-downloads');
 		return $icons;
 	}
 );
 
 add_filter('edd_accepted_payment_zeno_image', function () {
-	return ZENOCRCH_PLUGIN_URL . 'assets/images/checkout-logo.png';
+	return ZNCCEDD_PLUGIN_URL . 'assets/images/checkout-logo.png';
 });
 
-add_filter('edd_gateway_settings_url_zenocrch', function () {
-	return admin_url('edit.php?post_type=download&page=edd-settings&tab=gateways&section=zenocrch');
+add_filter('edd_gateway_settings_url_znccedd', function () {
+	return admin_url('edit.php?post_type=download&page=edd-settings&tab=gateways&section=znccedd');
 });
 
 /**
  * Remove CC form for this gateway (EDD standard pattern).
  */
-add_action('edd_' . ZENOCRCH_GATEWAY_ID . '_cc_form', '__return_false');
+add_action('edd_' . ZNCCEDD_GATEWAY_ID . '_cc_form', '__return_false');
 
 /**
  * Hide global CC fields when Zeno is chosen (prevents card fields UI).
@@ -49,7 +49,7 @@ add_filter(
 	'edd_show_cc_fields',
 	function ($show) {
 		$chosen = function_exists('edd_get_chosen_gateway') ? edd_get_chosen_gateway() : '';
-		if (ZENOCRCH_GATEWAY_ID === $chosen) {
+		if (ZNCCEDD_GATEWAY_ID === $chosen) {
 			return false;
 		}
 		return $show;
@@ -63,12 +63,12 @@ add_filter(
  * @param array $gateway_sections Current gateway tab subsections.
  * @return array
  */
-function zenocrch_register_zeno_gateway_section($gateway_sections)
+function znccedd_register_zeno_gateway_section($gateway_sections)
 {
-	$gateway_sections['zenocrch'] = __('Zeno', 'zeno-crypto-checkout-for-easy-digital-downloads');
+	$gateway_sections['znccedd'] = __('Zeno', 'zeno-crypto-checkout-for-easy-digital-downloads');
 	return $gateway_sections;
 }
-add_filter('edd_settings_sections_gateways', 'zenocrch_register_zeno_gateway_section', 1, 1);
+add_filter('edd_settings_sections_gateways', 'znccedd_register_zeno_gateway_section', 1, 1);
 
 
 /**
@@ -77,20 +77,20 @@ add_filter('edd_settings_sections_gateways', 'zenocrch_register_zeno_gateway_sec
  * @param array $gateway_settings Gateway tab settings.
  * @return array
  */
-function zenocrch_register_zeno_gateway_settings($gateway_settings)
+function znccedd_register_zeno_gateway_settings($gateway_settings)
 {
 
-	$secret = edd_get_option('zenocrch_secret_live', '');
+	$secret = edd_get_option('znccedd_secret_live', '');
 
 	$zeno_settings = array(
-		'zenocrch_settings_header' => array(
-			'id'   => 'zenocrch_settings_header',
+		'znccedd_settings_header' => array(
+			'id'   => 'znccedd_settings_header',
 			'name' => '<h3>' . esc_html__('Zeno Crypto Gateway', 'zeno-crypto-checkout-for-easy-digital-downloads') . '</h3>',
 			'type' => 'header',
 		),
 
-		'zenocrch_api_key_live'    => array(
-			'id'   => 'zenocrch_api_key_live',
+		'znccedd_api_key_live'    => array(
+			'id'   => 'znccedd_api_key_live',
 			'name' => esc_html__('API Key', 'zeno-crypto-checkout-for-easy-digital-downloads'),
 			'desc' => wp_kses_post(
 				sprintf(
@@ -103,8 +103,8 @@ function zenocrch_register_zeno_gateway_settings($gateway_settings)
 			'size' => 'regular',
 		),
 
-		'zenocrch_title'           => array(
-			'id'   => 'zenocrch_title',
+		'znccedd_title'           => array(
+			'id'   => 'znccedd_title',
 			'name' => esc_html__('Title', 'zeno-crypto-checkout-for-easy-digital-downloads'),
 			'desc' => esc_html__('Text shown to customers at checkout.', 'zeno-crypto-checkout-for-easy-digital-downloads'),
 			'type' => 'text',
@@ -115,17 +115,17 @@ function zenocrch_register_zeno_gateway_settings($gateway_settings)
 	/**
 	 * Allow devs to filter settings.
 	 */
-	$zeno_settings = apply_filters('zenocrch_settings', $zeno_settings);
+	$zeno_settings = apply_filters('znccedd_settings', $zeno_settings);
 
-	// Put all Zeno settings under the "zenocrch" subsection.
-	$gateway_settings['zenocrch'] = $zeno_settings;
+	// Put all Zeno settings under the "znccedd" subsection.
+	$gateway_settings['znccedd'] = $zeno_settings;
 
 	return $gateway_settings;
 }
-add_filter('edd_settings_gateways', 'zenocrch_register_zeno_gateway_settings', 1, 1);
+add_filter('edd_settings_gateways', 'znccedd_register_zeno_gateway_settings', 1, 1);
 
-add_filter('edd_is_gateway_setup_zenocrch', function ($is_setup) {
-	$api_key = zenocrch_api_key();
+add_filter('edd_is_gateway_setup_znccedd', function ($is_setup) {
+	$api_key = znccedd_api_key();
 	return ('' !== $api_key);
 });
 
@@ -140,15 +140,15 @@ add_filter('edd_is_gateway_setup_zenocrch', function ($is_setup) {
  * @param array $input Settings being saved.
  * @return array
  */
-function zenocrch_validate_api_key_on_save($input)
+function znccedd_validate_api_key_on_save($input)
 {
 
-	$current_key = edd_get_option('zenocrch_api_key_live', '');
+	$current_key = edd_get_option('znccedd_api_key_live', '');
 	$current_key = is_string($current_key) ? trim($current_key) : '';
 
 	$incoming_key = null; // null = not submitted.
-	if (array_key_exists('zenocrch_api_key_live', $input)) {
-		$incoming_key = trim((string) $input['zenocrch_api_key_live']);
+	if (array_key_exists('znccedd_api_key_live', $input)) {
+		$incoming_key = trim((string) $input['znccedd_api_key_live']);
 	}
 
 	$enabled_gateways = array();
@@ -156,8 +156,8 @@ function zenocrch_validate_api_key_on_save($input)
 		$enabled_gateways = $input['gateways'];
 	}
 
-	$zeno_was_enabled   = edd_is_gateway_active(ZENOCRCH_GATEWAY_ID);
-	$zeno_will_be_enabled = in_array(ZENOCRCH_GATEWAY_ID, $enabled_gateways, true);
+	$zeno_was_enabled   = edd_is_gateway_active(ZNCCEDD_GATEWAY_ID);
+	$zeno_will_be_enabled = in_array(ZNCCEDD_GATEWAY_ID, $enabled_gateways, true);
 
 	// If API key field not submitted, do nothing.
 	if (null === $incoming_key) {
@@ -169,7 +169,7 @@ function zenocrch_validate_api_key_on_save($input)
 	 * No error. Save as-is (empty allowed).
 	 */
 	if (! $zeno_was_enabled && ! $zeno_will_be_enabled) {
-		$input['zenocrch_api_key_live'] = $incoming_key; // empty OK.
+		$input['znccedd_api_key_live'] = $incoming_key; // empty OK.
 		return $input;
 	}
 
@@ -180,12 +180,12 @@ function zenocrch_validate_api_key_on_save($input)
 	if ('' === $incoming_key) {
 
 		// Keep previous key so it is not overwritten with empty.
-		$input['zenocrch_api_key_live'] = $current_key;
+		$input['znccedd_api_key_live'] = $current_key;
 
 		// If they tried to enable it without a key, prevent enabling.
 		if ($zeno_will_be_enabled && '' === $current_key) {
 			$input['gateways'] = array_values(
-				array_diff($enabled_gateways, array(ZENOCRCH_GATEWAY_ID))
+				array_diff($enabled_gateways, array(ZNCCEDD_GATEWAY_ID))
 			);
 		}
 
@@ -193,17 +193,17 @@ function zenocrch_validate_api_key_on_save($input)
 	}
 
 	// Non-empty key: save it.
-	$input['zenocrch_api_key_live'] = $incoming_key;
+	$input['znccedd_api_key_live'] = $incoming_key;
 
 	return $input;
 }
-add_filter('edd_settings_gateways_sanitize', 'zenocrch_validate_api_key_on_save', 10, 1);
+add_filter('edd_settings_gateways_sanitize', 'znccedd_validate_api_key_on_save', 10, 1);
 
 
 /**
  * Allow redirect to Zeno hosted checkout domain (CRITICAL).
  */
-function zenocrch_allow_redirect_to_zeno($hosts)
+function znccedd_allow_redirect_to_zeno($hosts)
 {
 	$hosts[] = 'pay.zenobank.io';
 	return $hosts;
@@ -212,40 +212,40 @@ function zenocrch_allow_redirect_to_zeno($hosts)
 /**
  * Helpers.
  */
-function zenocrch_api_key()
+function znccedd_api_key()
 {
-	$key = edd_get_option('zenocrch_api_key_live', '');
+	$key = edd_get_option('znccedd_api_key_live', '');
 	return is_string($key) ? trim($key) : '';
 }
 
-function zenocrch_secret()
+function znccedd_secret()
 {
-	$secret = edd_get_option('zenocrch_secret_live', '');
+	$secret = edd_get_option('znccedd_secret_live', '');
 	return is_string($secret) ? $secret : '';
 }
 
-function zenocrch_verification_token($order_id)
+function znccedd_verification_token($order_id)
 {
-	$secret = zenocrch_secret();
+	$secret = znccedd_secret();
 	if (empty($secret)) {
 		return '';
 	}
 	return hash_hmac('sha256', (string) $order_id,  $secret);
 }
 
-function zenocrch_validate_gateway()
+function znccedd_validate_gateway()
 {
-	$api_key = zenocrch_api_key();
-	if (ZENOCRCH_GATEWAY_ID == edd_get_chosen_gateway() && empty($api_key)) {
-		edd_set_error('zenocrch_missing_api_key', esc_html__('Payment gateway is not configured. Please contact site admin.', 'zeno-crypto-checkout-for-easy-digital-downloads'));
+	$api_key = znccedd_api_key();
+	if (ZNCCEDD_GATEWAY_ID == edd_get_chosen_gateway() && empty($api_key)) {
+		edd_set_error('znccedd_missing_api_key', esc_html__('Payment gateway is not configured. Please contact site admin.', 'zeno-crypto-checkout-for-easy-digital-downloads'));
 	}
 }
-add_action('edd_pre_process_purchase', 'zenocrch_validate_gateway', 1);
+add_action('edd_pre_process_purchase', 'znccedd_validate_gateway', 1);
 
 /**
  * Process gateway purchase like EDD PayPal gateway.
  */
-function zenocrch_process_purchase($purchase_data)
+function znccedd_process_purchase($purchase_data)
 {
 
 	if (! wp_verify_nonce($purchase_data['gateway_nonce'], 'edd-gateway')) {
@@ -256,7 +256,7 @@ function zenocrch_process_purchase($purchase_data)
 		);
 	}
 
-	$api_key = zenocrch_api_key();
+	$api_key = znccedd_api_key();
 
 	if (empty($api_key)) {
 		edd_record_gateway_error(
@@ -264,7 +264,7 @@ function zenocrch_process_purchase($purchase_data)
 			__('Zeno gateway is enabled but API key is missing.', 'zeno-crypto-checkout-for-easy-digital-downloads')
 		);
 
-		edd_set_error('zenocrch_missing_api_key', __('Payment gateway is not configured. Please contact site admin.', 'zeno-crypto-checkout-for-easy-digital-downloads'));
+		edd_set_error('znccedd_missing_api_key', __('Payment gateway is not configured. Please contact site admin.', 'zeno-crypto-checkout-for-easy-digital-downloads'));
 		edd_send_back_to_checkout('?payment-mode=' . $purchase_data['post_data']['edd-gateway']);
 		return;
 	}
@@ -278,7 +278,7 @@ function zenocrch_process_purchase($purchase_data)
 		'downloads'    => $purchase_data['downloads'],
 		'user_info'    => $purchase_data['user_info'],
 		'cart_details' => $purchase_data['cart_details'],
-		'gateway'      => ZENOCRCH_GATEWAY_ID,
+		'gateway'      => ZNCCEDD_GATEWAY_ID,
 		'status'       => 'pending',
 	);
 
@@ -304,7 +304,7 @@ function zenocrch_process_purchase($purchase_data)
 	$amount   = edd_get_payment_amount($payment_id);
 	$currency = edd_get_payment_currency_code($payment_id);
 
-	$verification_token = zenocrch_verification_token($payment_id);
+	$verification_token = znccedd_verification_token($payment_id);
 
 	$success_url = add_query_arg(
 		array(
@@ -317,11 +317,11 @@ function zenocrch_process_purchase($purchase_data)
 		array(
 			'order_id' => (int) $payment_id,
 		),
-		rest_url('zenocrch/v1/webhook')
+		rest_url('znccedd/v1/webhook')
 	);
 
 	$payload = array(
-		'version'            => ZENOCRCH_VERSION,
+		'version'            => ZNCCEDD_VERSION,
 		'platform'           => 'easy-digital-downloads',
 		'priceAmount'        => $amount,
 		'priceCurrency'      => $currency,
@@ -332,7 +332,7 @@ function zenocrch_process_purchase($purchase_data)
 	);
 
 	$response = wp_remote_post(
-		trailingslashit(ZENOCRCH_API_ENDPOINT) . 'api/v1/checkouts',
+		trailingslashit(ZNCCEDD_API_ENDPOINT) . 'api/v1/checkouts',
 		array(
 			'headers' => array(
 				'x-api-key'    => $api_key,
@@ -342,7 +342,7 @@ function zenocrch_process_purchase($purchase_data)
 				// Zeno client identification headers
 				'X-Client-Type'              => 'plugin',
 				'X-Client-Name'              => 'zeno-edd',
-				'X-Client-Version'           => ZENOCRCH_VERSION,
+				'X-Client-Version'           => ZNCCEDD_VERSION,
 				'X-Client-Platform'          => 'WordPress',
 				'X-Client-Platform-Version'  => get_bloginfo('version'),
 			),
@@ -359,7 +359,7 @@ function zenocrch_process_purchase($purchase_data)
 		);
 
 		edd_update_payment_status($payment_id, 'failed');
-		edd_set_error('zenocrch_api_error', 'Zeno API WP_Error: ' . $response->get_error_message());
+		edd_set_error('znccedd_api_error', 'Zeno API WP_Error: ' . $response->get_error_message());
 		edd_send_back_to_checkout('?payment-mode=' . $purchase_data['post_data']['edd-gateway']);
 		return;
 	}
@@ -375,17 +375,17 @@ function zenocrch_process_purchase($purchase_data)
 		);
 
 		edd_update_payment_status($payment_id, 'failed');
-		edd_set_error('zenocrch_api_error', 'Zeno API Error: Invalid API key');
+		edd_set_error('znccedd_api_error', 'Zeno API Error: Invalid API key');
 		edd_send_back_to_checkout('?payment-mode=' . $purchase_data['post_data']['edd-gateway']);
 		return;
 	}
 
-	edd_update_payment_meta($payment_id, '_zenocrch_payment_url', esc_url_raw($checkout_url));
+	edd_update_payment_meta($payment_id, '_znccedd_payment_url', esc_url_raw($checkout_url));
 
 	// IMPORTANT: allow pay.zenobank.io redirect and redirect using EDD helper.
-	add_filter('allowed_redirect_hosts', 'zenocrch_allow_redirect_to_zeno', 10, 1);
+	add_filter('allowed_redirect_hosts', 'znccedd_allow_redirect_to_zeno', 10, 1);
 
 	edd_redirect($checkout_url);
 	exit;
 }
-add_action('edd_gateway_' . ZENOCRCH_GATEWAY_ID, 'zenocrch_process_purchase');
+add_action('edd_gateway_' . ZNCCEDD_GATEWAY_ID, 'znccedd_process_purchase');

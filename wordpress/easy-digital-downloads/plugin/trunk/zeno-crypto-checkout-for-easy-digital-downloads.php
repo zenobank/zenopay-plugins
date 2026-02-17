@@ -14,11 +14,11 @@
 
 defined('ABSPATH') || exit;
 
-define('ZENOCRCH_VERSION', '1.0.0');
-define('ZENOCRCH_API_ENDPOINT', 'https://api.zenobank.io');
-define('ZENOCRCH_GATEWAY_ID', 'zenocrch');
-define('ZENOCRCH_PLUGIN_DIR', plugin_dir_path(__FILE__));
-define('ZENOCRCH_PLUGIN_URL', plugin_dir_url(__FILE__));
+define('ZNCCEDD_VERSION', '1.0.0');
+define('ZNCCEDD_API_ENDPOINT', 'https://api.zenobank.io');
+define('ZNCCEDD_GATEWAY_ID', 'znccedd');
+define('ZNCCEDD_PLUGIN_DIR', plugin_dir_path(__FILE__));
+define('ZNCCEDD_PLUGIN_URL', plugin_dir_url(__FILE__));
 
 add_action(
 	'plugins_loaded',
@@ -38,7 +38,7 @@ add_action(
 		require_once __DIR__ . '/includes/zc-edd-gateway.php';
 		require_once __DIR__ . '/includes/zc-edd-webhook.php';
 
-		zenocrch_register_webhook_route();
+		znccedd_register_webhook_route();
 	},
 	11
 );
@@ -52,8 +52,8 @@ register_activation_hook(
 		$option_key = 'edd_settings';
 		$settings   = get_option($option_key, array());
 
-		if (empty($settings['zenocrch_secret_live'])) {
-			$settings['zenocrch_secret_live'] = wp_generate_password(32, false, false);
+		if (empty($settings['znccedd_secret_live'])) {
+			$settings['znccedd_secret_live'] = wp_generate_password(32, false, false);
 		}
 
 		update_option($option_key, $settings);
@@ -66,7 +66,7 @@ register_activation_hook(
 add_filter(
 	'plugin_action_links_' . plugin_basename(__FILE__),
 	function ($links) {
-		$settings_url  = admin_url('edit.php?post_type=download&page=edd-settings&tab=gateways&section=zenocrch');
+		$settings_url  = admin_url('edit.php?post_type=download&page=edd-settings&tab=gateways&section=znccedd');
 		$settings_link = '<a href="' . esc_url($settings_url) . '">' . esc_html__('Settings', 'zeno-crypto-checkout-for-easy-digital-downloads') . '</a>';
 		array_unshift($links, $settings_link);
 		return $links;

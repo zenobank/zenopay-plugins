@@ -5,17 +5,17 @@ defined('ABSPATH') || exit;
  * Register REST route for Zeno payment webhook.
  * Public by design (Zeno POSTs here); auth via verificationToken in callback.
  */
-function zenocrch_register_webhook_route()
+function znccedd_register_webhook_route()
 {
 	add_action(
 		'rest_api_init',
 		function () {
 			register_rest_route(
-				'zenocrch/v1',
+				'znccedd/v1',
 				'/webhook',
 				array(
 					'methods'             => 'POST',
-					'callback'            => 'zenocrch_handle_webhook',
+					'callback'            => 'znccedd_handle_webhook',
 					'permission_callback' => '__return_true',
 				)
 			);
@@ -26,7 +26,7 @@ function zenocrch_register_webhook_route()
 /**
  * Handle Zeno webhook. Auth via verificationToken (checked in callback).
  */
-function zenocrch_handle_webhook(WP_REST_Request $request)
+function znccedd_handle_webhook(WP_REST_Request $request)
 {
 	$body = $request->get_json_params();
 	if (empty($body) || ! is_array($body)) {
@@ -41,7 +41,7 @@ function zenocrch_handle_webhook(WP_REST_Request $request)
 		return new WP_REST_Response(array('ok' => false, 'error' => 'missing_order_or_token'), 400);
 	}
 
-	$expected_token = hash_hmac('sha256', (string) $order_id, edd_get_option('zenocrch_secret_live', ''));
+	$expected_token = hash_hmac('sha256', (string) $order_id, edd_get_option('znccedd_secret_live', ''));
 
 	if (! hash_equals($expected_token, $received_token)) {
 		return new WP_REST_Response(array('ok' => false, 'error' => 'invalid_token'), 403);
