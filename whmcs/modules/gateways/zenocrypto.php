@@ -25,8 +25,14 @@ function zenocrypto_MetaData()
  */
 function zenocrypto_config()
 {
-    // One-time setup: generate secret key if missing
-    try {
+    // Only run DB setup when the gateway has been activated by the admin
+    $isActive = Capsule::table('tblpaymentgateways')
+        ->where('gateway', 'zenocrypto')
+        ->where('setting', 'type')
+        ->exists();
+
+    if ($isActive) {
+        // One-time setup: generate secret key if missing
         $existing = Capsule::table('tblpaymentgateways')
             ->where('gateway', 'zenocrypto')
             ->where('setting', 'secret_key')
@@ -57,8 +63,6 @@ function zenocrypto_config()
                 $table->timestamp('created_at')->useCurrent();
             });
         }
-    } catch (\Exception $e) {
-        // Silently fail during gateway discovery
     }
 
     return [
