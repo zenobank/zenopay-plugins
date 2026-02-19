@@ -1,4 +1,4 @@
-=== Web3 Crypto Checkout for WooCommerce. USDT, USDC, BTC, Binance Pay and More. No KYC ===
+=== Zeno Crypto Checkout for WooCommerce ( USDT, USDC, BTC and more) ===
 Contributors: zenobank
 Tags: cryptocurrency, crypto, crypto wallet, accept crypto, binance pay
 Requires at least: 6.0
