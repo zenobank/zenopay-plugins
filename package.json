@@ -5,6 +5,8 @@
   "workspaces": [
     "prestashop",
     "prestashop/*",
+    "tiendanube",
+    "tiendanube/*",
     "whm",
     "whm/*",
     "wordpress",

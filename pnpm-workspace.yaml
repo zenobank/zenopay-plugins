@@ -1,6 +1,8 @@
 packages:
   - "prestashop"
   - "prestashop/*"
+  - "tiendanube"
+  - "tiendanube/*"
   - "whm"
   - "whm/*"
   - "wordpress"
